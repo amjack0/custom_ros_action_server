@@ -1,0 +1,8 @@
+#goal
+float64 tau
+---
+#result
+string status
+---
+#feedback
+float64 error
