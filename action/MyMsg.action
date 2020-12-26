@@ -1,8 +1,8 @@
 #goal
-float64 tau
+std_msgs/Float64MultiArray tau
 ---
 #result
 string status
 ---
 #feedback
-float64 error
+std_msgs/Float64MultiArray error
