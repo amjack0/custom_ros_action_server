@@ -50,7 +50,7 @@ public:
    action_server.start();
   }
 
-  ~MoveRobotAction(void){}
+  ~MoveRobotAction(void){} // TODO: delete
 
 private:
 
@@ -74,7 +74,7 @@ private:
   // initialize subscriber
   void initializeSubscribers(void)
   {
-    pos_sub = nh.subscribe("/urbot/joint_states", 1, &MoveRobotAction::subscriberCb, this);
+    pos_sub = nh.subscribe("/urbot/joint_states", 1, &MoveRobotAction::subscriberCb, this);  //TODO:  1
     ROS_INFO("[AS] Subscriber Initialized");
   }
 
@@ -85,7 +85,7 @@ private:
     //tau_pub = nh.advertise<std_msgs::Float64>("/urbot/endeffector_frc_trq_controller_2/command", 1);
     for (short int j = 0; j < N_JOINT; j++)
     {
-      tau_pub = nh.advertise<std_msgs::Float64>(tauTopicNames[j], 1);
+      tau_pub = nh.advertise<std_msgs::Float64>(tauTopicNames[j], 1); //TODO: 1
       tau_multiple_pub.push_back(tau_pub);
     }
     ROS_INFO("[AS] Publisher Initialized");
@@ -93,12 +93,15 @@ private:
 
   void subscriberCb(const sensor_msgs::JointStateConstPtr &msg)
   {
+    //clear pose info
+    pos_info.position.clear(); pos_info.effort.clear();
+    pos_info.position.resize(N_JOINT); pos_info.effort.resize(N_JOINT);
 
     for(short int l=0; l< N_JOINT; l++){
 
       pos_info.position.push_back( msg->position[map_joint_states[l]] );
       pos_info.effort.push_back( msg->effort[map_joint_states[l]] );
-      //cout << "[AS] effort: " <<  pos_info.effort[l] << endl;
+      //cout << "[AS] position: " <<  pos_info.position[l] << endl;
     }
     ROS_INFO("[AS] Reading joint_states");
   }
@@ -112,7 +115,7 @@ private:
     err.data.resize(N_JOINT);
 
     for(short int l=0; l< N_JOINT; l++){
-      err.data[l] = goal->tau.data[l] - current.effort[l];
+      err.data[l] = abs(goal->tau.data[l])  - abs(current.effort[l]) ; // error = desired - current
     }
     return err;
   }
@@ -126,20 +129,12 @@ private:
     bool success = true;
     ROS_INFO("[AS] executing the action call_back");
 
-    /*std_msgs::Float64MultiArray desired_tau;
-    desired_tau[0] = goal->tau(0);
-    desired_tau.data = goal->tau; //ok
-    desired_tau.data = goal->tau.data; //ok
-    std::vector<double> da(6);
-    da.push_back(goal->tau.data[0]);*/
-
     std::vector<std_msgs::Float64> desired_tau(N_JOINT);
     std_msgs::Float64 a;
 
     for (short int j = 0; j < N_JOINT; j++){
       a.data=static_cast<float>(goal->tau.data[j]);
       desired_tau[j].data = a.data;
-      //desired_tau.push_back(a);
       //cout << "desired_tau: " << desired_tau[j].data << endl;
     }
 
@@ -174,8 +169,8 @@ private:
       rate.sleep();
     }
 
-    // TODO: set the tolerance
-    while (feedback.error.data[0] > 5 && feedback.error.data[1] > 5 && feedback.error.data[2] > 5 && feedback.error.data[3] > 5 && feedback.error.data[4] > 5 && feedback.error.data[5] > 5 );
+    // TODO: set the goal tolerance
+    while ( abs(feedback.error.data[0]) > 2 && abs(feedback.error.data[1]) > 2 && abs(feedback.error.data[2]) > 2 && abs(feedback.error.data[3]) > 2 && abs(feedback.error.data[4]) > 2 && abs(feedback.error.data[5]) > 2 );
 
     // check if succeeded--yes-->return result
     if(success)
@@ -192,13 +187,12 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "action_server");
   MoveRobotAction robot("trajectory_action");
-  ros::Rate rate(0.5);
-  int n=0;
+  ros::Rate rate(10);     // 10
+  unsigned int n=0;
   while (ros::ok())
   {
     ros::spinOnce();
-    ROS_INFO("%d" ,n);
-    n++;
+    //ROS_INFO("%d" ,n); n++;
     rate.sleep();
   }
   return 0;
